@@ -1,0 +1,319 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  UNQUALIFIED
+  CONVERTED
+}
+
+enum DealStage {
+  PROSPECTING
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum ActivityType {
+  NOTE
+  CALL
+  EMAIL
+  MEETING
+  TASK
+  FOLLOW_UP
+}
+
+enum OrderStatus {
+  DRAFT
+  CONFIRMED
+  FULFILLED
+  CANCELLED
+}
+
+model User {
+  id                String       @id @default(auto()) @map("_id") @db.ObjectId
+  name              String?
+  email             String?      @unique
+  emailVerified     DateTime?
+  image             String?
+  accounts          Account[]
+  sessions          Session[]
+  memberships       Membership[]
+  createdWorkspaces Workspace[]  @relation("WorkspaceCreator")
+  assignedLeads     Lead[]       @relation("LeadAssignee")
+  assignedDeals     Deal[]       @relation("DealAssignee")
+  createdActivities Activity[]   @relation("ActivityCreator")
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@index([identifier, expires])
+}
+
+model Workspace {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String       @unique
+  createdById String       @db.ObjectId
+  creator     User         @relation("WorkspaceCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  memberships Membership[]
+  companies   Company[]
+  contacts    Contact[]
+  leads       Lead[]
+  deals       Deal[]
+  activities  Activity[]
+  products    Product[]
+  orders      Order[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([createdById])
+}
+
+model Membership {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  workspaceId String        @db.ObjectId
+  userId      String        @db.ObjectId
+  role        WorkspaceRole @default(MEMBER)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+model Company {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  workspaceId String    @db.ObjectId
+  name        String
+  website     String?
+  phone       String?
+  industry    String?
+  notes       String?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contacts    Contact[]
+  leads       Lead[]
+  deals       Deal[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([workspaceId, name])
+}
+
+model Contact {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  workspaceId String    @db.ObjectId
+  companyId   String?   @db.ObjectId
+  firstName   String
+  lastName    String?
+  email       String?
+  phone       String?
+  jobTitle    String?
+  source      String?
+  notes       String?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  company     Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  leads       Lead[]
+  deals       Deal[]
+  activities  Activity[]
+  orders      Order[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([workspaceId, lastName, firstName])
+  @@index([workspaceId, email])
+  @@index([companyId])
+}
+
+model Lead {
+  id             String     @id @default(auto()) @map("_id") @db.ObjectId
+  workspaceId    String     @db.ObjectId
+  contactId      String?    @db.ObjectId
+  companyId      String?    @db.ObjectId
+  assignedToId   String?    @db.ObjectId
+  title          String
+  source         String?
+  status         LeadStatus @default(NEW)
+  estimatedValue Decimal?   @db.Decimal128
+  currency       String     @default("INR")
+  notes          String?
+  workspace      Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact        Contact?   @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  company        Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  assignedTo     User?      @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  activities     Activity[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, createdAt])
+  @@index([assignedToId])
+}
+
+model Deal {
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  workspaceId       String    @db.ObjectId
+  contactId         String?   @db.ObjectId
+  companyId         String?   @db.ObjectId
+  assignedToId      String?   @db.ObjectId
+  title             String
+  amount            Decimal   @default(0) @db.Decimal128
+  currency          String    @default("INR")
+  stage             DealStage @default(PROSPECTING)
+  probability       Int?
+  expectedCloseDate DateTime?
+  wonAt             DateTime?
+  lostAt            DateTime?
+  notes             String?
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact           Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  company           Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  assignedTo        User?     @relation("DealAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  activities        Activity[]
+  orders            Order[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([workspaceId, stage])
+  @@index([workspaceId, expectedCloseDate])
+  @@index([assignedToId])
+}
+
+model Activity {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  workspaceId String       @db.ObjectId
+  createdById String       @db.ObjectId
+  contactId   String?      @db.ObjectId
+  leadId      String?      @db.ObjectId
+  dealId      String?      @db.ObjectId
+  type        ActivityType @default(NOTE)
+  title       String
+  description String?
+  dueAt       DateTime?
+  completedAt DateTime?
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   User         @relation("ActivityCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  contact     Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  deal        Deal?        @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([workspaceId, dueAt])
+  @@index([workspaceId, completedAt])
+  @@index([contactId])
+  @@index([leadId])
+  @@index([dealId])
+}
+
+model Product {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  workspaceId String    @db.ObjectId
+  name        String
+  sku         String?
+  description String?
+  unitPrice   Decimal   @default(0) @db.Decimal128
+  unitCost    Decimal?  @db.Decimal128
+  currency    String    @default("INR")
+  isActive    Boolean   @default(true)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([workspaceId, sku])
+  @@index([workspaceId, name])
+}
+
+model Order {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  workspaceId String      @db.ObjectId
+  customerId  String?     @db.ObjectId
+  dealId      String?     @db.ObjectId
+  orderNumber String?
+  orderDate   DateTime    @default(now())
+  status      OrderStatus @default(CONFIRMED)
+  currency    String      @default("INR")
+  notes       String?
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer    Contact?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  deal        Deal?       @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([workspaceId, orderNumber])
+  @@index([workspaceId, orderDate])
+  @@index([customerId])
+  @@index([dealId])
+}
+
+model OrderItem {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  orderId     String   @db.ObjectId
+  productId   String?  @db.ObjectId
+  productName String
+  quantity    Decimal  @default(1) @db.Decimal128
+  unitPrice   Decimal  @db.Decimal128
+  unitCost    Decimal? @db.Decimal128
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+}

@@ -1,1 +1,0 @@
-{"question":"What is a closure in JavaScript?","answer":"A closure is a function that remembers variables from its outer scope even after the outer function has returned."}

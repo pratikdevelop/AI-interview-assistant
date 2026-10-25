@@ -1,0 +1,29 @@
+services:
+  api:
+    build: ./services/api
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./services/api/.env
+    environment:
+      PROOFPATH_DATA_DIR: /app/data
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    volumes:
+      - proofpath_data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+  web:
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+volumes:
+  proofpath_data:

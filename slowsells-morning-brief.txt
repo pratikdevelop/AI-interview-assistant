@@ -1,0 +1,43 @@
+SlowSells — Sales Morning Brief
+Source: sales.csv
+
+SlowSells (practical, careful sales assistant).
+Use *only* provided JSON facts. No invented costs, margins, causes, forecasts, or external market facts.
+If cost coverage is incomplete, say profitability cannot be confirmed. If < 14 daily data points, no trend/forecast.
+Short, useful morning brief in plain text.
+
+        *   THE BIG PICTURE
+        *   WHAT TO NOTICE (2-3 bullets)
+        *   ONE LOW-EFFORT NEXT STEP
+        *   DATA CAVEAT
+Under 180 words. Concrete, low-effort recommendations. Distinguish facts from suggestions.
+
+    *   `rowCount`: 100
+    *   `unitsSold`: 512,871
+    *   `totalRevenue`: 137,348,768.31
+    *   `productCount`: 12
+    *   `totalIngredientSpend`: 93,180,569.91
+    *   `grossContribution`: 44,168,198.40
+    *   `contributionMarginPercent`: 32.16%
+    *   `costCoveragePercent`: 100% (Profitability can be confirmed)
+    *   `dailyTrend`: 100 data points (Trend/forecast is allowed, but I should be careful not to invent *causes*).
+    *   `topProducts`:
+        1. Cosmetics ($36.6M, 83,718 units)
+        2. Office Supplies ($30.6M, 46,967 units)
+        3. Household ($29.9M, 44,727 units)
+        4. Baby Food ($10.4M, 40,545 units)
+        5. Clothes ($7.8M, 71,260 units)
+
+    *   *THE BIG PICTURE*: Total revenue is $137,348,768.31 with a contribution margin of 32.16%. We have sold 512,871 units across 12 products.
+
+    *   *WHAT TO NOTICE*:
+        *   Cosmetics is the highest revenue generator at $36,601,509.60.
+        *   Clothes has high volume (71,260 units) but lower revenue compared to the top three.
+        *   The top three products (Cosmetics, Office Supplies, Household) account for a significant portion of total revenue.
+
+    *   *ONE LOW-EFFORT NEXT STEP*: Review the individual margins for the "Clothes" category to see if the high unit volume is translating effectively to profit. (Wait, I don't have individual product margins. I should suggest something else based on facts).
+    *   *Alternative Next Step*: Check the inventory levels for Cosmetics, as it is the leading revenue driver.
+
+    *   *DATA CAVEAT*: Data is based on an uploaded CSV.
+
+    *   *Constraint Check*: "If fewer than 14 daily data points exist, do not claim a trend or forecast." -> I have

@@ -1,203 +1,84 @@
-# 🎯 DevPrep AI — Free AI Interview Practice for Freshers & Junior Devs
+# ProofPath AI — Working MVP Scaffold
 
-> Practice real technical interview questions and get instant AI-powered feedback.  
-> No login. No payment. Just practice.
+ProofPath AI maps job requirements to evidence in a resume and a public code repository. It produces a skill evidence report, a focused preparation plan and practice interview questions. It avoids opaque employability scores and distinguishes “not demonstrated in supplied materials” from “does not know”.
 
-![Demo](docs/demo.gif)
+## What works in this first build
+- Next.js + React + TypeScript web interface.
+- FastAPI backend with SQLite persistence (chosen for low-friction local development; PostgreSQL remains the planned deployment target).
+- PDF/DOCX/TXT resume extraction.
+- Public GitHub repository ingestion or project ZIP upload, with file/path/size filters.
+- Skill extraction and deterministic evidence mapping.
+- Click-through evidence excerpts, gap plan and mock-interview practice feedback.
+- Sample report mode for exploring UI without uploads.
+- Optional Meta Model API enhancement for preparation plans and question wording. Core local analysis works without an API key.
 
----
+## Run locally
+Requirements: Python 3.11+ (3.12 recommended), Node.js 20+ and npm.
 
-## 🚀 What It Does
+1. Open a terminal in this project folder.
+2. Run `./run-local.sh` (it creates a Python virtual environment and installs dependencies).
+3. Open `http://localhost:3000`.
+4. The API docs are at `http://localhost:8000/docs` and health check at `http://localhost:8000/health`.
 
-- **Practice interviews** with real questions across 14+ technical domains
-- **Get instant AI feedback** — strengths, missing points, score out of 10
-- **Multiple practice modes**:
-  - Text-based practice (traditional)
-  - Voice-based mock interviews
-  - **🎬 Comprehensive AI Video Interviews** (NEW!)
-- **No account needed** — open and start practicing in 30 seconds
-- **Completely free** — built by a dev, for devs
+If you prefer to start services separately:
 
----
-
-## 🧩 Who It's For
-
-- Freshers preparing for their first dev job
-- Junior developers aiming for mid-level roles  
-- Anyone who learns better by doing, not just reading
-
----
-
-## ⚡ Quick Start
-
-### Option 1: Frontend Only (No backend needed)
-Open `frontend/index.html` directly in your browser.  
-It works offline with a built-in question bank. Add your backend URL in the ⚙️ panel.
-
-### Option 2: Full Stack (Real AI feedback)
-
-**Backend:**
 ```bash
-cd backend
-cp .env.example .env
-# Add your ANTHROPIC_API_KEY to .env
+# Terminal 1 — API
+cd services/api
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
 pip install -r requirements.txt
-uvicorn main:app --reload
+uvicorn app.main:app --reload --port 8000
+
+# Terminal 2 — web UI
+cd apps/web
+npm install
+npm run dev
 ```
 
-**Frontend:**
+## Optional Meta Model API
+The local rules engine works without keys. To optionally use Meta Model API to improve the preparation plan and interview question wording:
+
+1. Obtain a key through the official Meta Model API developer flow.
+2. Put the key in `services/api/.env` as `MODEL_API_KEY=...`.
+3. Set `USE_META_MODEL=true` and (optionally) `META_MODEL_ID=muse-spark-1.3`.
+4. Restart the API.
+
+The integration uses `https://api.meta.ai/v1/chat/completions` with Bearer authentication and a configurable Muse model ID. Confirm current model access/limits in the [official Meta Model API docs](https://dev.meta.ai/docs/overview). Resume excerpts and the job description are sent to Meta when this optional feature is enabled. Do not enable it for documents you are not comfortable sharing with that provider.
+
+## Docker Compose
+Copy `services/api/.env.example` to `services/api/.env` first, then run:
+
 ```bash
-# Just open frontend/index.html in your browser
-# Or serve it with any static server:
-npx serve frontend/
+docker compose up --build
 ```
 
-Visit `http://localhost:3000` — the app auto-connects to your backend.
+Open `http://localhost:3000`. API docs: `http://localhost:8000/docs`.
 
----
-
-## 🗂️ Project Structure
-
-```
-ai-interview-prep/
-├── backend/
-│   ├── main.py              # FastAPI app + evaluation endpoint
-│   ├── requirements.txt
-│   └── .env.example
-├── data/
-│   └── questions.json       # 60 questions (React, Backend, SQL)
-├── frontend/
-│   └── index.html           # Complete React-like SPA (single file)
-└── README.md
+## Tests
+```bash
+cd services/api
+pip install -r requirements.txt
+pip install pytest
+PYTHONPATH=. pytest -q
 ```
 
----
+## Current limitations — intentionally honest
+- Skill extraction and evidence statuses currently use rules and heuristics; this is a working baseline, not a validated skill assessment.
+- The analyzer may miss unusual wording or over-read incidental mentions. Always inspect cited source excerpts.
+- Repository evidence indicates text/code references, not code ownership, runtime correctness or expert mastery.
+- SQLite is used for a low-friction initial demo. PostgreSQL and a managed job queue can replace it after the end-to-end workflow stabilizes.
+- Interview feedback is rubric-based heuristics and should be treated as practice guidance, not a definitive score.
+- Public GitHub API can rate-limit unauthenticated requests; uploading a ZIP is the fallback.
+- No private repository OAuth, accounts, production multi-tenancy, resume export or code execution.
 
-## 🤖 API Endpoints
+## Security notes
+Inputs are untrusted. The app only parses selected text files and never executes uploaded code. ZIP files are checked for path traversal and bounded by size/count limits. Public repository URLs are restricted to GitHub. For any public deployment, add authentication, per-user authorization, stricter request throttling, upload lifecycle deletion and a security review.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/roles` | Get all available roles |
-| GET | `/questions?role=react` | Get questions for a role |
-| GET | `/questions/mixed` | Get mixed questions from all domains |
-| POST | `/evaluate` | AI evaluation of an answer |
-| POST | `/hint` | Get interview tips before answering |
-| POST | `/execute-code` | Execute code snippets in sandbox |
-
-**Evaluate request:**
-```json
-{
-  "question": "What is the virtual DOM?",
-  "answer": "The virtual DOM is a lightweight copy of the real DOM..."
-}
+## Repo layout
+```text
+apps/web/            Next.js UI
+services/api/app/    FastAPI routes, ingestion and analysis
+services/api/tests/  Backend test suite
+docs/                Original system design documentation
 ```
-
-**Evaluate response:**
-```json
-{
-  "strengths": ["Correctly identified the purpose of virtual DOM"],
-  "missing_points": ["Didn't mention reconciliation algorithm"],
-  "score": 7,
-  "summary": "Good foundational answer...",
-  "ideal_answer_hint": "Mention diffing, reconciliation, and batch updates."
-}
-```
-
----
-
-## 🚢 Deployment
-
-**Backend → Railway / Render (free tier):**
-1. Push repo to GitHub
-2. Connect to [Railway](https://railway.app) or [Render](https://render.com)
-3. Set `ANTHROPIC_API_KEY` environment variable
-4. Deploy → get your backend URL
-
-**Frontend → Vercel / Netlify / GitHub Pages:**
-1. The `frontend/` folder is a single HTML file
-2. Works on any static host
-3. Update the backend URL in the ⚙️ config panel
-
----
-
-## 🎬 Comprehensive AI Video Interview (New Feature)
-
-The newest addition combines all domains into a professional-grade interview simulation:
-
-**Features:**
-- **Mixed-domain questions** — Randomly selected from all 14+ technical areas
-- **Video recording** — Records your webcam feed throughout the session
-- **Voice transcription** — Real-time speech-to-text for your answers
-- **Domain-specific evaluation** — Tracks performance by technical area
-- **Professional feedback** — Detailed scoring with domain breakdown
-- **Privacy-focused** — All processing happens locally in your browser
-
-**How it works:**
-1. Select which technical domains to include
-2. Choose number of questions (3-20)
-3. Grant camera/microphone permissions
-4. AI speaks each question aloud
-5. You answer verbally while being recorded
-6. Get instant evaluation with domain-specific insights
-7. Receive comprehensive results with performance breakdown
-
-**Technical domains covered:**
-JavaScript, React, TypeScript, Python, Backend, SQL, DSA, System Design, CSS, Git, DevOps, Networking, OS Concepts, Behavioral
-
-## 🧠 AI Evaluation Prompt
-
-The AI acts as a senior technical interviewer and evaluates:
-- **Strengths** — what the candidate got right
-- **Missing points** — key concepts not mentioned
-- **Score (1–10)** — honest assessment
-- **Ideal answer hint** — what a 9-10 answer includes
-
----
-
-## ❤️ Sponsor This Project
-
-If DevPrep AI helped you land an interview or get better at practicing, please consider sponsoring. I built this while job hunting myself, in my spare time, completely free.
-
-**[→ Sponsor on GitHub](https://github.com/sponsors/your-username)**
-
-Even $1/month helps me keep this running and build more free tools.
-
----
-
-## 🤝 Contributing
-
-Pull requests are welcome! Ideas for contribution:
-- Add more question categories (System Design, DSA, etc.)
-- Add a timer mode
-- Improve the AI evaluation prompt
-- Add dark/light theme toggle
-
----
-
-## 📊 Roadmap
-
-- [x] Question bank (React, Backend, SQL)
-- [x] AI evaluation with Claude
-- [x] Offline fallback mode
-- [x] System Design category
-- [x] DSA / coding questions
-- [x] Resume review mode
-- [x] Share your score
-- [x] Comprehensive AI video interview
-- [x] Domain-specific performance tracking
-- [x] Code execution sandbox
-- [x] Interview hints and tips
-
----
-
-## 📄 License
-
-MIT — free to use, fork, and build on.
-
----
-
-<div align="center">
-
-Built with ❤️ by an indie dev · [GitHub](https://github.com/your-username/ai-interview-prep) · [Sponsor](https://github.com/sponsors/your-username)
-
-</div>
